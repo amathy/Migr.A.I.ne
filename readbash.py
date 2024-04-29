@@ -1,32 +1,19 @@
 import cv2
 import numpy as np
-import easyocr
-import math
+import torch
 
-def ocr_subregion(subregion, tokenlist):
+
+def display_im(subregion):
 
     # Preprocess the subregion
     gray_subregion = cv2.cvtColor(subregion, cv2.COLOR_BGR2GRAY)
-    gray_subregion[0, 0] = 1
+    gray_subregion[0, 0] = np.min(gray_subregion)
     gray_subregion = cv2.normalize(gray_subregion, None, 0, 255, cv2.NORM_MINMAX)
     gray_subregion[0, 0] = 255
     # Display the image
     cv2.imshow('Image', gray_subregion)
-
-    # Wait for a key press
     key = cv2.waitKey(0)
 
-    #return query_openai_with_image(subregion)
-
-    # Perform OCR on the subregion
-    #results = reader.readtext(gray_subregion, allowlist=tokenlist)
-    results = reader.recognize(gray_subregion, allowlist=tokenlist)
-    # Extract the recognized text
-    text = ''
-    for result in results:
-        text += result[1] + ' '
-
-    return text.strip()
 
 
 def register_image(image, template):
@@ -61,52 +48,53 @@ def register_image(image, template):
 
     return registered_image
 
-# Read the image and template
-image = cv2.imread('images/tests/bashtest.png')
-template = cv2.imread('images/templates/bash2.png')
 
-# Register the image to the template
-registered_image = register_image(image, template)
+def get_image_subregion_list(image):
+    # Read the image and template
+    image = cv2.imread(image)
+    template = cv2.imread('images/templates/bash2.png')
 
+    # Register the image to the template
+    registered_image = register_image(image, template)
 
-#roi = (240, 300, 33, 67)  # (x, y, width, height)
+    subregion_list = []
 
-# Perform OCR on the subregion
+    roi_height = 67
+    y0 = 299
+    xs = [(240), 273, 305, 338, 371, 403, 436, 469, 501, 534, 576, 618, 661, 703, 745, 786, 830, 872, 914, 956, 999, 1041, 1083, 1125, 1168, 1210, 1252, 1294, 1337, 1378, 1421]
+    xs = list(zip(xs, range(1, 32)))
+    ys = [300+roi_height*(i-1) for i in range(1, 7)]
+    mths = ["Jan", "Feb", "Mar", "April", "May", "June"]
 
-# Initialize the EasyOCR reader
+    ys = list(zip(ys, mths))
 
-allowed_outputs = ["M", "H"]
-# "x", "X", "mod", "Mod", "mild", "Mild", "sev", "Sev"]
+    roi_small_width = 33
+    roi_big_width = 42
+    pad = 3
 
-roi_height = 67
-y0 = 299
-xs = [(240), 273, 305, 338, 371, 403, 436, 469, 501, 534, 576, 618, 661, 703, 745, 786, 830, 872, 914, 956, 999, 1041, 1083, 1125, 1168, 1210, 1252, 1294, 1337, 1378, 1421]
-xs = list(zip(xs, range(1, 32)))
-ys = [300+roi_height*(i-1) for i in range(1, 7)]
-mths = ["Jan", "Feb", "Mar", "April", "May", "June"]
+    for (curr_y, curr_mth) in ys:
+        for (curr_x, curr_day) in xs:
+            roi = (curr_x, curr_y, roi_big_width, roi_height)
+            #Extract the region of interest (ROI) from the image
+            x, y, w, h = roi
+            if curr_day < 10:
+                subregion = registered_image[y+pad:y+h-pad, x+pad:x+roi_small_width-pad]
+                big_img = 255 * np.ones((roi_height-2*pad, roi_big_width-2*pad, 3), dtype=np.uint8)
+                startx=4
+                big_img[:, startx:(startx+roi_small_width-2*pad), :] = subregion
+                
+                #fix smaller boxes
+                for y2 in range(0, roi_height-2*pad):
+                    for x2 in range(0, startx):
+                        big_img[y2, x2, :] = registered_image[y+y2+pad, x + pad, :]
+                
+                for y2 in range(0, roi_height-2*pad):
+                    for x2 in range(startx+roi_small_width-2*pad-1, roi_big_width-2*pad):
+                        big_img[y2, x2, :] = registered_image[y+y2+pad, x + roi_small_width - pad - 2, :]
 
-ys = list(zip(ys, mths))
+                subregion = big_img
+            else:
+                subregion = registered_image[y+pad:y+h-pad, x+pad:x+roi_big_width-pad]
 
-roi_small_width = 33
-roi_big_width = 42
-pad = 3
-reader = easyocr.Reader(['en'], recog_network='english_g2')
-for (curr_y, curr_mth) in ys:
-    print(f"{curr_mth}")
-    for (curr_x, curr_day) in xs:
-        print(f"{curr_mth} {curr_day}")
-        roi = (curr_x, curr_y, roi_big_width, roi_height)
-        #Extract the region of interest (ROI) from the image
-        x, y, w, h = roi
-        if curr_day < 10:
-            subregion = registered_image[y+pad:y+h-pad, x+pad:x+roi_small_width-pad]
-            big_img = 255 * np.ones((roi_height-2*pad, roi_big_width-2*pad, 3), dtype=np.uint8)
-            startx=4
-            big_img[:, startx:(startx+roi_small_width-2*pad), :] = subregion
-            subregion = big_img
-        else:
-            subregion = registered_image[y+pad:y+h-pad, x+pad:x+roi_big_width-pad]
-
-        text = ocr_subregion(subregion, allowed_outputs)
-        print("OCR Result:")
-        print(text)
+            subregion_list.append((curr_y, curr_mth, subregion))
+    return subregion_list
