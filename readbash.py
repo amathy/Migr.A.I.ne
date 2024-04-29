@@ -2,13 +2,14 @@ import cv2
 import numpy as np
 import easyocr
 import math
-from openaivisionquery import query_openai_with_image
 
 def ocr_subregion(subregion, tokenlist):
 
     # Preprocess the subregion
     gray_subregion = cv2.cvtColor(subregion, cv2.COLOR_BGR2GRAY)
-
+    gray_subregion[0, 0] = 1
+    gray_subregion = cv2.normalize(gray_subregion, None, 0, 255, cv2.NORM_MINMAX)
+    gray_subregion[0, 0] = 255
     # Display the image
     cv2.imshow('Image', gray_subregion)
 
