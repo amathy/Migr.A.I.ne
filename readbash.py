@@ -56,7 +56,6 @@ def get_image_subregion_list(image):
 
     # Register the image to the template
     registered_image = register_image(image, template)
-
     subregion_list = []
 
     roi_height = 67

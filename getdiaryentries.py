@@ -9,6 +9,7 @@ loaded_model = ObjectDetectionCNN()
 loaded_model.load_state_dict(torch.load('models/diarymodel.pth'))
 
 test_image = 'images/tests/mathytest1.jpg'
+#test_image = 'images/tests/bash_secondsheet_rotated.png'
 sr_list = get_image_subregion_list(test_image)
 
 loaded_model.eval()
@@ -19,5 +20,12 @@ for (yr, mth, im) in sr_list:
         output = loaded_model(p)
         # Check the outputs
         predicted_classes = (output > 0.5).float()
-        print("Predicted classes:", predicted_classes)
-        display_im(im)
+        #print("Predicted classes:", predicted_classes)
+        #display_im(im)
+        first_element = predicted_classes[0, 0].item()
+        second_element = predicted_classes[0, 1].item()
+        if first_element == 1.0:
+            print("Migraine!")
+        if second_element == 1.0:
+            print("Headache!")
+

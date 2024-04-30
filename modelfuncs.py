@@ -3,6 +3,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import random
+import math
 from readbash import get_image_subregion_list, display_im
 
 class ObjectDetectionCNN(nn.Module):
@@ -20,7 +22,6 @@ class ObjectDetectionCNN(nn.Module):
         x = F.max_pool2d(x, 2)
         x = F.relu(self.conv3(x))
         x = F.max_pool2d(x, 2)
-        print(x.shape)
         x = x.view(-1, 64 * 7 * 4)
         x = F.relu(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))  # Apply sigmoid activation for binary output
@@ -50,6 +51,9 @@ def train_model():
     M_image = 'images/training/M/Bash_M_resize.jpg'
     H_image = 'images/training/H/Bash_H_resize.jpg'
     empty_image = 'images/training/Empty/Bash_Empty_resize.jpg'
+    test_frac = 0.1
+    batch_size = 32
+    num_labels = 2
 
     for (yr, mth, im) in get_image_subregion_list(M_image):
         p = pack_image_into_tensor(im)
@@ -72,12 +76,30 @@ def train_model():
         images.append(p)
         labels.append(label_tensor)
 
-    batch_images = torch.cat(images, dim=0)
-    batch_labels = torch.cat(labels, dim=0)
 
+    #shuffle images and divide into test/train
+    paired_lists = list(zip(images, labels))
+    random.shuffle(paired_lists)
+    images, labels = zip(*paired_lists)
+    N_tot = len(images)
+    N_test = math.floor(test_frac * N_tot)
+    N_train = N_tot - N_test
 
-    train_data = images
-    train_labels = labels
+    test_images = images[0:N_test]
+    test_labels = labels[0:N_test]
+    train_images = images[N_test:]
+    train_labels = labels[N_test:]
+
+    #training batches
+    train_batches = []
+    for i in range(0, len(train_images), batch_size):
+        batch_images = torch.cat(train_images[i:i+batch_size], dim=0)
+        batch_labels = torch.cat(train_labels[i:i+batch_size], dim=0)
+        train_batches.append((batch_images, batch_labels))
+
+    #testing batch
+    test_images = torch.cat(test_images, dim=0)
+    test_labels = torch.cat(test_labels, dim=0)
 
     # Create an instance of the model
     model = ObjectDetectionCNN()
@@ -87,38 +109,32 @@ def train_model():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     # Training loop
-    num_epochs = 100
-    batch_size = 1
+    num_epochs = 20
 
     for epoch in range(num_epochs):
-        # Forward pass
-        outputs = model(batch_images)
-        loss = criterion(outputs, batch_labels)
+        for (batch_images, batch_labels) in train_batches:
+            # Forward pass
+            outputs = model(batch_images)
+            loss = criterion(outputs, batch_labels)
 
-        # Backward pass and optimization
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # Backward pass and optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-    # Testing
-    #with torch.no_grad():
-    #    outputs = model(test_data)
-    #    predicted = (outputs > 0.5).float()  # Threshold the outputs to get binary predictions
-
-    #print("Predicted object presence:")
-    #print(predicted)
-
     torch.save(model.state_dict(),'models/diarymodel.pth')
-    # Set the model to evaluation mode
-    model.eval()
 
-    # Disable gradient computation
+    # Testing
+    model.eval()
     with torch.no_grad():
-        # Pass the input through the model
-        for im in images:
-            output = model(im)
-            # Check the outputs
-            predicted_classes = (output > 0.5).float()
-            print("Predicted classes:", predicted_classes)
+        outputs = model(test_images)
+        predicted = (outputs > 0.5).float()  # Threshold the outputs to get binary predictions
+        correct = (predicted == test_labels).float().sum()  # Count the number of correct predictions
+        accuracy = correct * 100 / (num_labels * len(test_labels))  # Calculate the accuracy
+        true_positives = ((predicted == 1) & (test_labels == 1)).sum().float()
+        false_positives = ((predicted == 1) & (test_labels == 0)).sum().float()
+        precision = 100 * true_positives / (true_positives + false_positives)
+        print(f"Test Accuracy: {accuracy:.4f}%")
+        print(f"Test Precision: {precision:.4f}%")
