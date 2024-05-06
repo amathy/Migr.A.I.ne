@@ -5,6 +5,7 @@ import os
 
 
 def main():
+    st.set_page_config(layout="wide")
     st.title('MigrAIne',)
     
     # File upload widget
