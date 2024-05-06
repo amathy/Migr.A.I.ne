@@ -95,5 +95,5 @@ def get_image_subregion_list(image):
             else:
                 subregion = registered_image[y+pad:y+h-pad, x+pad:x+roi_big_width-pad]
 
-            subregion_list.append((curr_y, curr_mth, subregion))
+            subregion_list.append((curr_mth, curr_day, subregion))
     return subregion_list

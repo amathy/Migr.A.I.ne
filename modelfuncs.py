@@ -55,21 +55,21 @@ def train_model():
     batch_size = 32
     num_labels = 2
 
-    for (yr, mth, im) in get_image_subregion_list(M_image):
+    for (mth, day, im) in get_image_subregion_list(M_image):
         p = pack_image_into_tensor(im)
         label_tensor = torch.tensor([1, 0]).float()
         label_tensor = label_tensor.unsqueeze(0)
         images.append(p)
         labels.append(label_tensor)
 
-    for (yr, mth, im) in get_image_subregion_list(H_image):
+    for (mth, day, im) in get_image_subregion_list(H_image):
         p = pack_image_into_tensor(im)
         label_tensor = torch.tensor([0, 1]).float()
         label_tensor = label_tensor.unsqueeze(0)
         images.append(p)
         labels.append(label_tensor)
 
-    for (yr, mth, im) in get_image_subregion_list(empty_image):
+    for (mth, day, im) in get_image_subregion_list(empty_image):
         p = pack_image_into_tensor(im)
         label_tensor = torch.tensor([0, 0]).float()
         label_tensor = label_tensor.unsqueeze(0)
