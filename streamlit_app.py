@@ -5,7 +5,7 @@ import os
 
 
 def main():
-    st.title('Migr.AI.ne',)
+    st.title('MigrAIne',)
     
     # File upload widget
     uploaded_file = st.file_uploader('Choose an image file', type=['jpg', 'jpeg', 'png'])
