@@ -11,8 +11,8 @@ def display_im(subregion):
     gray_subregion = cv2.normalize(gray_subregion, None, 0, 255, cv2.NORM_MINMAX)
     gray_subregion[0, 0] = 255
     # Display the image
-    cv2.imshow('Image', gray_subregion)
-    key = cv2.waitKey(0)
+   # cv2.imshow('Image', gray_subregion)
+   # key = cv2.waitKey(0)
 
 
 
