@@ -3,3 +3,4 @@ opencv_python_headless==4.9.0.80
 pandas==2.0.3
 streamlit==1.34.0
 torch==2.2.2
+streamlit_browser_engine==0.0.1

@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from browser_detection import browser_detection_engine
+
 from getdiaryentries import get_diary_from_image
 import os
 
@@ -44,9 +46,18 @@ def click_date_button(r, c, k):
 
 
 def main():
-    st.set_page_config(layout="wide")
-    st.title('MigrAIne',)
 
+
+
+    st.set_page_config(layout="wide")
+    st.title('MigrAIne')
+
+    bd = browser_detection_engine()
+    if "isMobile" in bd:
+        is_mobile = bd["isMobile"]
+    else:
+        is_mobile = False
+    
     if 'diary_df' not in st.session_state:
         # File upload widget
         uploaded_file = st.file_uploader('Choose an image file', type=['jpg', 'jpeg', 'png'])
@@ -67,19 +78,45 @@ def main():
             os.remove(impath)
             st.rerun()
 
-        #
+
     if 'diary_df' in st.session_state:
-        cols = st.columns(31)
-        c = 0
-        for col in cols:
-            with col:
-                st.text(str(c+1))
-                for r in range(0, 6):
-                    k = "btn_" + str(r) + "_"+str(c)
-                    lab = st.session_state.diary_df.iloc[r, c]
-                    if st.button(lab, key=k, use_container_width=True):
-                        click_date_button(r, c, k)
-            c = c + 1
+        
+        mths=["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+        if is_mobile:
+            cols = st.columns(17)
+            for r in range(0, 6):
+                with cols[0]:
+                    st.button(mths[r], use_container_width=True)
+                    st.button("", key=mths[r]+"_skip", use_container_width=True)
+                for dh in range(0, 16):
+                    with cols[dh+1]:
+                        c=dh
+                        k = "btn_" + str(r) + "_"+str(c)
+                        lab = st.session_state.diary_df.iloc[r, c]
+                        if st.button(lab, key=k, use_container_width=True):
+                            click_date_button(r, c, k)
+                        c=dh+16
+                        if c < 31:
+                            k = "btn_" + str(r) + "_"+str(c)
+                            lab = st.session_state.diary_df.iloc[r, c]
+                            if st.button(lab, key=k, use_container_width=True):
+                                click_date_button(r, c, k)
+                        if c == 31:
+                            k = "btn_" + str(r) + "_endblank"
+                            st.button(" ", key=k, use_container_width=True)
+
+        else:
+            cols = st.columns(31)
+            c = 0
+            for col in cols:
+                with col:
+                    st.text(str(c+1))
+                    for r in range(0, 6):
+                        k = "btn_" + str(r) + "_"+str(c)
+                        lab = st.session_state.diary_df.iloc[r, c]
+                        if st.button(lab, key=k, use_container_width=True):
+                            click_date_button(r, c, k)
+                c = c + 1
 
         cols = st.columns(6)
         with cols[2]:
